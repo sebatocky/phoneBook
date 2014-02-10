@@ -27,19 +27,26 @@ TODO
 	@@key_length = 35 # ограничение на размер ключа
 	@@data_length = 80 # ограничение на размер данных
 	@@buffer_size = 5 # размер буфера (количество операций до сохранения данных на диск)
+
 	#-------------------------------------------------------------------------------------------
 	def initialize (file_name = "data.txt")
 		record = lambda{|h,k| h[k] = Hash.new(&record)}
 		@pages = Hash.new(&record) # хранит разделы записной книжки, каждый раздел хранит свои записи
+		@is_available = false
 		@transaction_counter = 0
+		@data_file_name = file_name
 		self.open
 	end
+
+	attr_reader :data_file_name, :is_available
+
 	#-------------------------------------------------------------------------------------------
 	# ИНТЕРФЕЙС
 	def open
 		begin
-			if self.size == 0
+			if self.is_available == false # либо инициализация, либо была закрыта
 				self.load_from_file()
+				@is_available = true
 			else
 				raise "PhoneBook is already open!"
 			end
@@ -50,6 +57,7 @@ TODO
 	end
 
 	def close
+		@is_available = false
 		self.dump()
 		self.clear
 	end
@@ -57,6 +65,9 @@ TODO
 	def set(key,data) # добавить / обновить запись
 		raise "\"key\" must be a String" unless key.kind_of? String
 		raise "\"data\" must be a String" unless data.kind_of? String
+		raise "\"key\" must be not empty" unless !key.empty?
+		raise "\"data\" must be not empty" unless !data.empty?
+
 		begin
 			key = PhoneBook.get_normal_name(key)
 			index = PhoneBook.index_by_name(key)
@@ -79,6 +90,8 @@ TODO
 
 	def get(key) # получить запись
 		raise "\"key\" must be a String" unless key.kind_of? String
+		raise "\"key\" must be not empty" unless !key.empty?
+
 		key = PhoneBook.get_normal_name(key)
 		index = PhoneBook.index_by_name(key)
 		return self.exist?(key, index) ? @pages[index][key] : nil
@@ -87,6 +100,8 @@ TODO
 
 	def del(key) # удалить запись
 		raise "\"key\" must be a String" unless key.kind_of? String
+		raise "\"key\" must be not empty" unless !key.empty?
+		
 		key = PhoneBook.get_normal_name(key)
 		index = PhoneBook.index_by_name(key)
 		if self.exist?(key, index) 
@@ -121,7 +136,7 @@ TODO
 		return false
 	end
 
-	def dump(file_name = "data.txt")
+	def dump(file_name = self.data_file_name)
 		# формат: {хэш=>[name, data]}
 		begin
 			File.open(file_name, 'w:utf-8') do |data_file|
@@ -139,11 +154,11 @@ TODO
 
 	#-------------------------------------------------------------------------------------------
 	protected
-	def load_from_file(file_name = "data.txt")
+	def load_from_file()
 		begin
 			self.clear
-			if File.exist?(file_name)
-				File.open(file_name, 'r:utf-8') do |data_file|
+			if File.exist?(self.data_file_name)
+				File.open(self.data_file_name, 'r:utf-8') do |data_file|
 					while line = data_file.gets
 	  					parse_data = line.scan(/^\{(?:(\d+)=>)([^\{]+)\}$/) # проверка данных на соответсвие формату dump() через RegExp
 	  					if parse_data.size == 1
@@ -165,10 +180,12 @@ TODO
 
 	def commit
 		@transaction_counter += 1
-		if @transaction_counter > @@buffer_size
-			self.dump("tmp.txt")
-			@transaction_counter = 0
-			
+		if self.is_available
+			if @transaction_counter > @@buffer_size
+				self.dump()
+				@transaction_counter = 0
+				
+			end
 		end
 	end
 	#-------------------------------------------------------------------------------------------
@@ -176,25 +193,35 @@ TODO
 	def self.get_normal_name(name) # проверить и нормализовать
 		# ограничим длину строки 35 символами (@@key_length), обрежем лишние пробелы, первый символ заглавная буква
 		raise "\"name\" must be a String" unless name.kind_of? String
-		normal_name = PhoneBook.replace_special_characters(name) # уберём служебные символы
-		normal_name = Unicode::capitalize(normal_name.chomp.strip)
-		if normal_name.length > @@key_length
-		 	normal_name = normal_name[0...@@key_length] 
-		end 
 		
+		if name.length > @@key_length
+			normal_name = name[0...@@key_length] 
+		else
+		 	normal_name = name
+		end 
+
+		normal_name = PhoneBook.replace_special_characters(normal_name) # уберём служебные символы
+		normal_name = Unicode::capitalize(normal_name.chomp.strip)
+
 		return normal_name
+		#raise "Name normalization error!"
 	end
 
 	def self.get_normal_data(data) # проверить и нормализовать
 		# ограничим длину строки 80 символами (@@data_length), обрежем лишние пробелы
 		raise "\"data\" must be a String" unless data.kind_of? String
-		normal_data = PhoneBook.replace_special_characters(data) # уберём служебные символы
-		normal_data = normal_data.chomp.strip
-		if normal_data.length > @@data_length
-		 	normal_data = normal_name[0...@@data_length] 
+		
+		if data.length > @@data_length
+			normal_data = data[0...@@data_length] 
+		else
+		 	normal_data = data
 		end 
 
+		normal_data = PhoneBook.replace_special_characters(normal_data) # уберём служебные символы
+		normal_data = normal_data.chomp.strip
+
 		return normal_data
+		#raise "Data normalization error!"
 	end
 
 	def self.replace_special_characters(str)
