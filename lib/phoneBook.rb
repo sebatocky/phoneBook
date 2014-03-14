@@ -18,8 +18,6 @@ class PhoneBook
 	Пример типичной записи в книжку: {'Вася', "Телефон 8-812-527-34-12, пр. Стачек 108"}
 		key: {"Вася": индекс "В", идентификатор: "Вася"}
 		value: {"Телефон 8-812-527-34-12, пр. Стачек 108"}
-TODO
-
 ----------------------------------------------------------------------------------------	
 =end
 	# ПЕРЕМЕННЫЕ КЛАССА 
@@ -63,10 +61,10 @@ TODO
 	end
 
 	def set(key,data) # добавить / обновить запись
-		raise "\"key\" must be a String" unless key.kind_of? String
-		raise "\"data\" must be a String" unless data.kind_of? String
-		raise "\"key\" must be not empty" unless !key.empty?
-		raise "\"data\" must be not empty" unless !data.empty?
+		raise ArgumentError, "\"key\" must be a String" unless key.kind_of? String
+		raise ArgumentError, "\"data\" must be a String" unless data.kind_of? String
+		raise ArgumentError, "\"key\" must be not empty" unless !key.empty?
+		raise ArgumentError, "\"data\" must be not empty" unless !data.empty?
 
 		begin
 			key = PhoneBook.get_normal_name(key)
@@ -89,8 +87,8 @@ TODO
 	alias  []= set
 
 	def get(key) # получить запись
-		raise "\"key\" must be a String" unless key.kind_of? String
-		raise "\"key\" must be not empty" unless !key.empty?
+		raise ArgumentError, "\"key\" must be a String" unless key.kind_of? String
+		raise ArgumentError, "\"key\" must be not empty" unless !key.empty?
 
 		key = PhoneBook.get_normal_name(key)
 		index = PhoneBook.index_by_name(key)
@@ -99,8 +97,8 @@ TODO
 	alias  [] get
 
 	def del(key) # удалить запись
-		raise "\"key\" must be a String" unless key.kind_of? String
-		raise "\"key\" must be not empty" unless !key.empty?
+		raise ArgumentError, "\"key\" must be a String" unless key.kind_of? String
+		raise ArgumentError, "\"key\" must be not empty" unless !key.empty?
 		
 		key = PhoneBook.get_normal_name(key)
 		index = PhoneBook.index_by_name(key)
@@ -125,7 +123,7 @@ TODO
 	end
 
 	def exist?(key, index = nil)
-		raise "\"key\" must be a String" unless key.kind_of? String
+		raise ArgumentError, "\"key\" must be a String" unless key.kind_of? String
 		key = PhoneBook.get_normal_name(key)
 		index = index != nil ? index : PhoneBook.index_by_name(key)
 		if @pages.has_key?(index) 
@@ -192,7 +190,7 @@ TODO
 	private
 	def self.get_normal_name(name) # проверить и нормализовать
 		# ограничим длину строки 35 символами (@@key_length), обрежем лишние пробелы, первый символ заглавная буква
-		raise "\"name\" must be a String" unless name.kind_of? String
+		raise ArgumentError, "\"name\" must be a String" unless name.kind_of? String
 		
 		if name.length > @@key_length
 			normal_name = name[0...@@key_length] 
@@ -209,7 +207,7 @@ TODO
 
 	def self.get_normal_data(data) # проверить и нормализовать
 		# ограничим длину строки 80 символами (@@data_length), обрежем лишние пробелы
-		raise "\"data\" must be a String" unless data.kind_of? String
+		raise ArgumentError, "\"data\" must be a String" unless data.kind_of? String
 		
 		if data.length > @@data_length
 			normal_data = data[0...@@data_length] 
@@ -225,18 +223,18 @@ TODO
 	end
 
 	def self.replace_special_characters(str)
-		raise "\"str\" must be a String" unless str.kind_of? String
+		raise ArgumentError, "\"str\" must be a String" unless str.kind_of? String
 		str.gsub(/[\"\{\[\}\]=>]+/, " ")
 		
 	end
 
 	def self.index_by_name(name)
-		raise "\"name\" must be a String" unless name.kind_of? String
+		raise ArgumentError, "\"name\" must be a String" unless name.kind_of? String
 		Unicode::upcase(name.lstrip[0])
 	end
 
 	def self.hash_by_string(str)
-		raise "\"str\" must be a String" unless str.kind_of? String
+		raise ArgumentError, "\"str\" must be a String" unless str.kind_of? String
 		# хэш = сумма кодов символов
 		result = 0
 		arr = str.codepoints

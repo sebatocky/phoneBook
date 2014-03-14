@@ -1,5 +1,5 @@
 require 'test/unit'
-require '../PhoneBook'
+require '../src/PhoneBook'
 
 class Test_PhoneBook < Test::Unit::TestCase
 	def setup
@@ -14,7 +14,7 @@ class Test_PhoneBook < Test::Unit::TestCase
 
 	def test_02_add_data
 		assert_not_nil( @pb, "Ссылка на объект не пустая")
-		assert_raise(RuntimeError) {@pb.set("", "")}
+		assert_raise(ArgumentError) {@pb.set("", "")}
 		@pb.set("ТехПомощь", "(911) 927-14-44")
 		assert_equal( 1, @pb.size, "Количество записей 1")
 		assert_equal( "(911) 927-14-44", @pb.get("ТехПомощь"), "Данные записи с именем \"ТехПомощь\"")
