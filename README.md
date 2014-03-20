@@ -1,7 +1,8 @@
 #PhoneBook
 https://github.com/sebatocky/phoneBook/
 *Учебное приложение для обучения Ruby*
-(author: Denis Medik / Денис Медик)
+
+--(author: Denis Medik / Денис Медик)--
 - - -
 ###ЦЕЛИ:
 * Освоение синтаксиса и конструкций Ruby
@@ -15,6 +16,7 @@ https://github.com/sebatocky/phoneBook/
 ###Структура проекта
 	./data  - хранение данных записной книжки, файл данных
 	./lib   - исходные коды, они же исполняемые файлы приложения
+	./public - каталог для публичных ресурсов (*.css *.js)
 	./tests - тесты
 	./views - шаблоны html страниц
 

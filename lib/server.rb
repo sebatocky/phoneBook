@@ -22,7 +22,7 @@ require './phoneBook' # подключаем класс PhoneBook
 =end
 
 #------------------------------------------------------------------------------------------- 
-# СЕРВЛЕТ
+# СЕРВЛЕТ: обслуживает клиентские запросы на стороне сервера
 class PhoneBookServlet < WEBrick::HTTPServlet::AbstractServlet
 	attr_accessor :name # для обращения к параметру внутри ERB-шаблона
 
@@ -32,18 +32,29 @@ class PhoneBookServlet < WEBrick::HTTPServlet::AbstractServlet
 			when '/' # главная страница с данными записной книжки
 				response.status = 200
 				response.content_type = "text/html"
-				index_html_template = IO.read('../views/index.html.erb') # шаблон для вывода главной страницы
-				index_html_renderer = ERB.new(index_html_template.force_encoding("UTF-8"))
-				response.body = index_html_renderer.result(binding) # возвращаем сгенерированный html
+				response.body = TEMPLATES['index_html_renderer'].result(binding) # возвращаем сгенерированный html
+			
 			when '/get' # поиск по имени
-				@name = request.query["name"].force_encoding('utf-8')
-				response.status = 200
+				if request.query["name"]
+					@name = request.query["name"].force_encoding('utf-8')
+					response.status = 200
+					response.content_type = "text/html"
+					response.body = TEMPLATES['search_html_renderer'].result(binding) # возвращаем сгенерированный html
+				end
+			
+			when '/404' # кастомизированная страничка 404
 				response.content_type = "text/html"
-				search_html_template = IO.read('../views/search.html.erb') # шаблон для страницы поиска
-				search_html_renderer = ERB.new(search_html_template.force_encoding("UTF-8"))
-				response.body = search_html_renderer.result(binding) # возвращаем сгенерированный html
+				response.body = FILES['page_404_html']
+				response.status = 404
+			
+			when /(.css)$/ # по типу файла, *.js и прочую статику аналогично
+				response.content_type = "text/css"
+				response.status = 200
+				response.body = FILES[request.path]
+				
 			else
-			response.set_redirect(WEBrick::HTTPStatus::NotFound, '/') # не существующий адрес отправляем обратно на главную
+			response.set_redirect(WEBrick::HTTPStatus::TemporaryRedirect, '/404') # не существующий адрес отправляем обратно на главную
+
 		end
 		
 	end
@@ -56,16 +67,29 @@ class PhoneBookServlet < WEBrick::HTTPServlet::AbstractServlet
 	    	when 'dump'
 	    		$pb.dump
 	    		response.set_redirect(WEBrick::HTTPStatus::Found, '/')
+
 			when 'set'
+				name, data = nil
 				name = request.query["name"].force_encoding('utf-8')
 				data = request.query["data"].force_encoding('utf-8')
-				$pb.set(name, data) # обновили существующую запись
-				response.set_redirect(WEBrick::HTTPStatus::Found, '/')
+				if name && data
+					$pb.set(name, data) # обновили существующую запись
+					response.set_redirect(WEBrick::HTTPStatus::Found, '/')
+				else
+					raise WEBrick::HTTPStatus::Error
+				end
+
 			when 'add'
+				name, data = nil
 				name = request.query["name"].force_encoding('utf-8')
 				data = request.query["data"].force_encoding('utf-8')
-				$pb.set(name, data) # добавили новую запись
-				response.set_redirect(WEBrick::HTTPStatus::Found, '/')
+				if name && data
+					$pb.set(name, data) # добавили новую запись
+					response.set_redirect(WEBrick::HTTPStatus::Found, '/')
+				else
+					raise WEBrick::HTTPStatus::Error
+				end
+
 			when 'del'
 				name = request.query["name"].force_encoding('utf-8')
 				$pb.del(name) # удалили запись
@@ -79,10 +103,27 @@ class PhoneBookServlet < WEBrick::HTTPServlet::AbstractServlet
 
 end
 #------------------------------------------------------------------------------------------- 
-# создаём записную книжку
-$pb = PhoneBook.new('../data/phonebook.txt') # то, что глобальная переменная это не хорошо! можно пропатчить SERVER?
 
-# запуск экземпляра сервера на порту 8088
+begin
+	# ОКРУЖЕНИЕ
+	FILES = Hash.new # чтобы лишний раз не перечитывать файлы
+	FILES['index_html_template'] = IO.read('../views/index.html.erb').force_encoding('utf-8')
+	FILES['search_html_template'] = IO.read('../views/search.html.erb').force_encoding('utf-8')
+	FILES['page_404_html'] = IO.read('../public/html/404.html').force_encoding('utf-8')
+	FILES['/css/main.css'] = IO.read('../public/css/main.css').force_encoding('utf-8')
+
+	TEMPLATES = Hash.new # чтобы лишний раз не создавать объектов ERB.new
+	TEMPLATES['index_html_renderer'] = ERB.new(FILES['index_html_template'])
+	TEMPLATES['search_html_renderer'] = ERB.new(FILES['search_html_template'])
+
+	# БИЗНЕС-ЛОГИКА
+	$pb = PhoneBook.new('../data/phonebook.txt') # то, что глобальная переменная это не хорошо! можно пропатчить SERVER?
+
+rescue 
+	raise "Not initialized environment!"
+	
+end
+# ВЕБ-СЕРВЕР
 SERVER = WEBrick::HTTPServer.new(
 	ServerName: 'PhoneBook',
 	Port: 8088,
